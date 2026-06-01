@@ -87,6 +87,19 @@ def _extract_images_from_cooked(cooked: str) -> List[str]:
     return images
 
 
+def _extract_text_preview(cooked: str, max_len: int = 100) -> str:
+    """Extract a short plain-text preview from cooked HTML."""
+    text = re.sub(r'<div[^>]*class="[^"]*lightbox-wrapper[^"]*"[^>]*>.*?</div>', ' ', cooked, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<img[^>]*>', ' ', text, flags=re.IGNORECASE)
+    text = re.sub(r'<[^>]+>', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    if len(text) < 5:
+        return ""
+    if len(text) > max_len:
+        text = text[:max_len].rsplit(' ', 1)[0] + "…"
+    return text
+
+
 def _extract_videos_from_cooked(cooked: str) -> List[Dict[str, str]]:
     """Extract YouTube video thumbnails from Discourse onebox embeds in cooked HTML."""
     videos: List[Dict[str, str]] = []
@@ -210,12 +223,22 @@ def main() -> None:
         if not cooked:
             continue
 
+        author = _to_str(post.get("username", ""))
+        preview = _extract_text_preview(cooked)
+
         images = _extract_images_from_cooked(cooked)
         if images:
-            items.append({"type": "image", "src": random.choice(images)})
+            item: Dict[str, Any] = {"type": "image", "src": random.choice(images), "author": author}
+            if preview:
+                item["preview"] = preview
+            items.append(item)
 
         for video in _extract_videos_from_cooked(cooked):
-            items.append({"type": "video", **video})
+            v: Dict[str, Any] = {"type": "video", "author": author}
+            if preview:
+                v["preview"] = preview
+            v.update(video)
+            items.append(v)
 
     print(f"[INFO] Extracted {len(items)} items ({sum(1 for i in items if i['type'] == 'image')} images, {sum(1 for i in items if i['type'] == 'video')} videos)")
 

@@ -88,6 +88,12 @@
                     {{ if eq .type "image" }}
                     <button class="screenshot-item screenshot-lightbox-trigger experiment-item" type="button" data-full="{{ .src }}" aria-label="Open screenshot">
                         <img src="{{ .src }}" alt="Monthly WIP screenshot" loading="lazy">
+                        {{ if or .author .preview }}
+                        <span class="monthly-wip-author">
+                            {{ with .author }}<span class="monthly-wip-author-name">{{ . }}</span>{{ end }}
+                            {{ with .preview }}<span class="monthly-wip-author-preview">{{ . }}</span>{{ end }}
+                        </span>
+                        {{ end }}
                     </button>
                     {{ else if eq .type "video" }}
                     <a class="screenshot-item experiment-item monthly-wip-video" href="{{ .videoUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Watch video on YouTube">
@@ -95,6 +101,12 @@
                         <div class="monthly-wip-video-overlay">
                             <i class="fas fa-play"></i>
                         </div>
+                        {{ if or .author .preview }}
+                        <span class="monthly-wip-author">
+                            {{ with .author }}<span class="monthly-wip-author-name">{{ . }}</span>{{ end }}
+                            {{ with .preview }}<span class="monthly-wip-author-preview">{{ . }}</span>{{ end }}
+                        </span>
+                        {{ end }}
                     </a>
                     {{ end }}
                     {{ end }}
