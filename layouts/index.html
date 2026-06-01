@@ -148,6 +148,49 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
+<!-- ======== MONTHLY WIP ======== -->
+{{- $monthlyWip := index $community "monthly-wip" | default dict -}}
+{{- $wipItems := index $monthlyWip "items" | default slice -}}
+{{- $wipTopic := index $monthlyWip "topic" | default dict -}}
+{{- if gt (len $wipItems) 0 -}}
+<section class="monthly-wip-section" aria-labelledby="monthly-wip-title">
+    <div class="section-container">
+        <div class="showcase-header showcase-header--monthly-wip">
+            <div>
+                <h2 class="section-title" id="monthly-wip-title">{{ $wipTopic.title | default "Monthly Work in Progress" }}</h2>
+                <p class="section-subtitle">{{ len $wipItems }} items — screenshots and videos from this month's community WIP thread.</p>
+            </div>
+            {{ with $wipTopic.url }}<a href="{{ . }}" class="btn btn-outline" target="_blank" rel="noopener noreferrer">View thread <i class="fas fa-arrow-right"></i></a>{{ end }}
+        </div>
+        <div class="screenshots-carousel monthly-wip-carousel" id="monthly-wip-carousel">
+            <button class="carousel-btn carousel-prev" type="button" data-carousel-target="monthly-wip-carousel" data-carousel-dir="-1" title="Previous">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="screenshots-track monthly-wip-track">
+                {{ range $wipItems }}
+                {{ if eq .type "image" }}
+                <button class="screenshot-item screenshot-lightbox-trigger monthly-wip-item" type="button" data-full="{{ .src }}" aria-label="Open screenshot">
+                    <img src="{{ .src }}" alt="Monthly WIP screenshot" loading="lazy">
+                </button>
+                {{ else if eq .type "video" }}
+                <a class="screenshot-item monthly-wip-item monthly-wip-video" href="{{ .videoUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Watch video on YouTube">
+                    <img src="{{ .src }}" alt="Video thumbnail" loading="lazy">
+                    <div class="monthly-wip-video-overlay">
+                        <i class="fas fa-play"></i>
+                    </div>
+                </a>
+                {{ end }}
+                {{ end }}
+            </div>
+            <button class="carousel-btn carousel-next" type="button" data-carousel-target="monthly-wip-carousel" data-carousel-dir="1" title="Next">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</section>
+{{- end -}}
+<script src="{{ "/js/showcase-carousel.js" | relURL }}" defer></script>
+
 <!-- ======== GET STARTED CTA ======== -->
 <section class="cta-section">
     <div class="section-container">
