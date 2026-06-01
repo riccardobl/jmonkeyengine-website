@@ -350,6 +350,18 @@ section.game-page {
     max-height: 88vh;
     object-fit: contain;
 }
+.showcase-lightbox__image {
+    cursor: zoom-in;
+    transform-origin: center;
+    transition: transform 0.18s ease;
+    touch-action: none;
+}
+.showcase-lightbox__image.is-zoomed {
+    cursor: grab;
+}
+.showcase-lightbox__image.is-zoomed:active {
+    cursor: grabbing;
+}
 .showcase-lightbox__youtube {
     width: ~"min(1500px, 96vw)";
     max-width: 96vw;
@@ -359,6 +371,73 @@ section.game-page {
 }
 .showcase-lightbox__video,
 .showcase-lightbox__youtube { display: none; }
+.showcase-lightbox__meta {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem 1rem;
+    padding: 1.8rem 1.1rem 1rem;
+    color: #fff;
+    background: linear-gradient(to top, rgba(0,0,0,0.86), rgba(0,0,0,0.46) 62%, rgba(0,0,0,0));
+}
+.showcase-lightbox__meta[hidden] { display: none; }
+.showcase-lightbox__meta-name {
+    font-size: 0.98rem;
+    line-height: 1.25;
+}
+.showcase-lightbox__meta-link {
+    max-width: 100%;
+    color: @accent;
+    font-size: 0.86rem;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+    text-decoration: none;
+}
+.showcase-lightbox__meta-link:hover,
+.showcase-lightbox__meta-link:focus-visible {
+    color: #fff;
+    outline: none;
+    text-decoration: underline;
+}
+.showcase-lightbox__zoom-controls {
+    position: fixed;
+    top: 1.25rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    display: flex;
+    gap: 0.45rem;
+    padding: 0.35rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(10,10,14,0.88);
+    box-shadow: 0 14px 34px rgba(0,0,0,0.28);
+}
+.showcase-lightbox__zoom-controls[hidden] { display: none; }
+.showcase-lightbox__zoom-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.14);
+    background: rgba(255,255,255,0.055);
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+.showcase-lightbox__zoom-btn:hover,
+.showcase-lightbox__zoom-btn:focus-visible {
+    border-color: @accent;
+    color: @accent;
+    outline: none;
+}
 .showcase-lightbox__close {
     position: fixed;
     top: 1.25rem;
@@ -382,34 +461,6 @@ section.game-page {
     color: @accent;
     outline: none;
 }
-.showcase-lightbox__post-link {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.45rem;
-    padding: 0.65rem 1rem;
-    font-size: 0.95rem;
-    font-weight: 600;
-    text-align: center;
-    white-space: nowrap;
-    text-decoration: none;
-    color: @accent;
-    background: rgba(0, 0, 0, 0.55);
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 0 0 17px 17px;
-    backdrop-filter: blur(14px) saturate(135%);
-    -webkit-backdrop-filter: blur(14px) saturate(135%);
-    transition: background 0.2s ease, opacity 0.2s ease;
-}
-.showcase-lightbox__post-link:hover {
-    background: rgba(0, 0, 0, 0.75);
-    opacity: 0.85;
-}
-
 /* Game tags in page body */
 .game-tag {
     background: fade(@accent, 12%);

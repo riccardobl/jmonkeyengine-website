@@ -50,8 +50,15 @@
                 <div class="screenshots-track experiments-track">
                     {{ range shuffle $experimentImages }}
                     {{ $src := printf "/images/showcase/experiments/%s" .Name }}
-                    <button class="screenshot-item screenshot-lightbox-trigger experiment-item" type="button" data-full="{{ $src | relURL }}" aria-label="Open experiment screenshot">
-                        <img src="{{ $src | relURL }}" alt="jMonkeyEngine experiment screenshot" loading="lazy">
+                    {{ $metaPath := printf "%s/%s" $experimentDir (replaceRE "\\.[^.]+$" ".json" .Name) }}
+                    {{ $meta := dict }}
+                    {{ if fileExists $metaPath }}{{ $meta = (readFile $metaPath | transform.Unmarshal) }}{{ end }}
+                    {{ $experimentName := index $meta "name" }}
+                    {{ $experimentLink := index $meta "link" }}
+                    {{ $alt := "jMonkeyEngine experiment screenshot" }}
+                    {{ with $experimentName }}{{ $alt = printf "%s experiment screenshot" . }}{{ end }}
+                    <button class="screenshot-item screenshot-lightbox-trigger experiment-item" type="button" data-full="{{ $src | relURL }}"{{ with $experimentName }} data-experiment-name="{{ . }}"{{ end }}{{ with $experimentLink }} data-experiment-link="{{ . }}"{{ end }} aria-label="Open experiment screenshot">
+                        <img src="{{ $src | relURL }}" alt="{{ $alt }}" loading="lazy">
                     </button>
                     {{ end }}
                 </div>
@@ -86,7 +93,7 @@
                 <div class="screenshots-track experiments-track">
                     {{ range $wipItems }}
                     {{ if eq .type "image" }}
-                    <button class="screenshot-item screenshot-lightbox-trigger experiment-item" type="button" data-full="{{ .src }}" data-post-url="{{ .postUrl }}" aria-label="Open screenshot">
+                    <button class="screenshot-item screenshot-lightbox-trigger experiment-item" type="button" data-full="{{ .src }}"{{ with .author }} data-experiment-name="{{ . }}"{{ end }}{{ with .postUrl }} data-experiment-link="{{ . }}"{{ end }} aria-label="Open screenshot">
                         <img src="{{ .src }}" alt="Monthly WIP screenshot" loading="lazy">
                         {{ if or .author .preview }}
                         <span class="monthly-wip-author">
@@ -96,7 +103,7 @@
                         {{ end }}
                     </button>
                     {{ else if eq .type "video" }}
-                    <button class="screenshot-item screenshot-lightbox-trigger experiment-item monthly-wip-video" type="button" data-full="{{ .videoId }}" data-media-type="youtube" data-post-url="{{ .postUrl }}" aria-label="Watch video">
+                    <button class="screenshot-item screenshot-lightbox-trigger experiment-item monthly-wip-video" type="button" data-full="{{ .videoId }}" data-media-type="youtube"{{ with .author }} data-experiment-name="{{ . }}"{{ end }}{{ with .postUrl }} data-experiment-link="{{ . }}"{{ end }} aria-label="Watch video">
                         <img src="{{ .src }}" alt="Video thumbnail" loading="lazy">
                         <div class="monthly-wip-video-overlay">
                             <i class="fas fa-play"></i>
