@@ -8,13 +8,15 @@ The script finds the topic whose title matches "(Month YYYY) Monthly WIP Screens
 Thread" for the current month, then extracts images and YouTube video thumbnails
 from the post content.
 
-If the current month's thread is not found, the script exits with an error and
-does NOT write the output file — causing the Hugo build to fail as requested.
+If the current month's thread is not found, the script tries the previous month
+(repeating up to MAX_MONTHLY_WIP_LOOKBACK times, default 3).  If no thread is
+found within the lookback window, the script exits with an error.
 """
 
 from __future__ import annotations
 
 import json
+import random
 import re
 import sys
 import urllib.error
@@ -33,6 +35,7 @@ MONTH_NAMES = [
 ]
 
 DEFAULT_OUTPUT = "data/community/monthly-wip.json"
+DEFAULT_LOOKBACK_MONTHS = 3
 
 
 def _read_json(url: str, payload: Optional[dict] = None, timeout: int = 30) -> Tuple[Any, dict]:
@@ -131,11 +134,9 @@ def _fetch_topic_posts(topic_id: int) -> List[Dict[str, Any]]:
     return posts
 
 
-def find_current_month_thread() -> Optional[Dict[str, Any]]:
-    """Find the topic matching the current month's WIP thread."""
-    now = datetime.now(timezone.utc)
-    month_name = MONTH_NAMES[now.month - 1]
-    year = now.year
+def find_thread_for_month(year: int, month: int) -> Optional[Dict[str, Any]]:
+    """Find the topic matching the WIP thread for a given year/month."""
+    month_name = MONTH_NAMES[month - 1]
     expected_title = f"({month_name} {year}) Monthly WIP Screenshot Thread"
 
     response, _ = _read_json(MONTHLY_CATEGORY_URL)
@@ -143,14 +144,22 @@ def find_current_month_thread() -> Optional[Dict[str, Any]]:
 
     for topic in topics:
         title = _to_str(topic.get("title"))
-        # Match exactly or allow slight variations (e.g. extra whitespace)
         if title.lower() == expected_title.lower():
             return topic
 
     return None
 
 
+def _decrement_month(year: int, month: int) -> Tuple[int, int]:
+    """Return the previous month as (year, month)."""
+    if month == 1:
+        return year - 1, 12
+    return year, month - 1
+
+
 def main() -> None:
+    import os
+
     parser_args = sys.argv[1:]
     output_path = DEFAULT_OUTPUT
     if "--output" in parser_args:
@@ -158,16 +167,28 @@ def main() -> None:
         if idx + 1 < len(parser_args):
             output_path = parser_args[idx + 1]
 
-    print(f"[INFO] Looking for current month's WIP thread...")
+    max_lookback = int(os.environ.get("MAX_MONTHLY_WIP_LOOKBACK", DEFAULT_LOOKBACK_MONTHS))
 
-    topic = find_current_month_thread()
+    now = datetime.now(timezone.utc)
+    year, month = now.year, now.month
+
+    print(f"[INFO] Looking for WIP thread (max {max_lookback} months lookback)...")
+
+    topic = None
+    for attempt in range(max_lookback + 1):
+        month_name = MONTH_NAMES[month - 1]
+        print(f"[INFO] Trying {month_name} {year}...")
+        topic = find_thread_for_month(year, month)
+        if topic is not None:
+            break
+        if attempt < max_lookback:
+            print(f"[WARN] No WIP thread found for {month_name} {year}.")
+            year, month = _decrement_month(year, month)
+
     if topic is None:
-        now = datetime.now(timezone.utc)
-        month_name = MONTH_NAMES[now.month - 1]
-        year = now.year
         print(
-            f"[ERROR] No WIP thread found for {month_name} {year}. "
-            f"Expected title: '({month_name} {year}) Monthly WIP Screenshot Thread'"
+            f"[ERROR] No WIP thread found after checking {max_lookback + 1} month(s). "
+            f"Tried back to {MONTH_NAMES[month - 1]} {year}."
         )
         sys.exit(1)
 
@@ -189,18 +210,29 @@ def main() -> None:
         if not cooked:
             continue
 
-        for img_src in _extract_images_from_cooked(cooked):
-            items.append({"type": "image", "src": img_src})
+        images = _extract_images_from_cooked(cooked)
+        if images:
+            items.append({"type": "image", "src": random.choice(images)})
 
         for video in _extract_videos_from_cooked(cooked):
             items.append({"type": "video", **video})
 
     print(f"[INFO] Extracted {len(items)} items ({sum(1 for i in items if i['type'] == 'image')} images, {sum(1 for i in items if i['type'] == 'video')} videos)")
 
-    now = datetime.now(timezone.utc).isoformat()
+    generated_at = datetime.now(timezone.utc).isoformat()
+
+    image_count = sum(1 for i in items if i["type"] == "image")
+    video_count = sum(1 for i in items if i["type"] == "video")
+    parts = []
+    if image_count:
+        parts.append(f"{image_count} screenshot{'s' if image_count != 1 else ''}")
+    if video_count:
+        parts.append(f"{video_count} video{'s' if video_count != 1 else ''}")
+    items_summary = " and ".join(parts) if parts else "no items"
 
     payload = {
-        "generatedAt": now,
+        "generatedAt": generated_at,
+        "subtitle": f"{items_summary} — our community is very active, check what they're working on this month!",
         "topic": {
             "id": topic_id,
             "title": topic_title,
