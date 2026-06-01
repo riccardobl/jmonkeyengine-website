@@ -86,7 +86,7 @@
                 <div class="screenshots-track experiments-track">
                     {{ range $wipItems }}
                     {{ if eq .type "image" }}
-                    <button class="screenshot-item screenshot-lightbox-trigger experiment-item" type="button" data-full="{{ .src }}" aria-label="Open screenshot">
+                    <button class="screenshot-item screenshot-lightbox-trigger experiment-item" type="button" data-full="{{ .src }}" data-post-url="{{ .postUrl }}" aria-label="Open screenshot">
                         <img src="{{ .src }}" alt="Monthly WIP screenshot" loading="lazy">
                         {{ if or .author .preview }}
                         <span class="monthly-wip-author">
@@ -96,7 +96,7 @@
                         {{ end }}
                     </button>
                     {{ else if eq .type "video" }}
-                    <a class="screenshot-item experiment-item monthly-wip-video" href="{{ .videoUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Watch video on YouTube">
+                    <button class="screenshot-item screenshot-lightbox-trigger experiment-item monthly-wip-video" type="button" data-full="{{ .videoId }}" data-media-type="youtube" data-post-url="{{ .postUrl }}" aria-label="Watch video">
                         <img src="{{ .src }}" alt="Video thumbnail" loading="lazy">
                         <div class="monthly-wip-video-overlay">
                             <i class="fas fa-play"></i>
@@ -107,7 +107,7 @@
                             {{ with .preview }}<span class="monthly-wip-author-preview">{{ . }}</span>{{ end }}
                         </span>
                         {{ end }}
-                    </a>
+                    </button>
                     {{ end }}
                     {{ end }}
                 </div>

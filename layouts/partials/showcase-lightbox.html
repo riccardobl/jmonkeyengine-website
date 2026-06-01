@@ -3,11 +3,16 @@
         <i class="fas fa-times"></i>
     </button>
     <button class="showcase-lightbox__backdrop" type="button" aria-label="Close screenshot preview"></button>
-    <figure class="showcase-lightbox__figure">
-        <img class="showcase-lightbox__image" src="" alt="Screenshot preview">
-        <video class="showcase-lightbox__video" controls playsinline></video>
-        <iframe class="showcase-lightbox__youtube" title="Video preview" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
-    </figure>
+    <div class="showcase-lightbox__content">
+        <figure class="showcase-lightbox__figure">
+            <img class="showcase-lightbox__image" src="" alt="Screenshot preview">
+            <video class="showcase-lightbox__video" controls playsinline></video>
+            <iframe class="showcase-lightbox__youtube" title="Video preview" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+            <a class="showcase-lightbox__post-link" href="" target="_blank" rel="noopener noreferrer" style="display:none">
+                <i class="fas fa-arrow-up-right-from-square"></i> View original post
+            </a>
+        </figure>
+    </div>
 </div>
 
 <script>
@@ -19,12 +24,13 @@
         return document.getElementById('showcase-lightbox');
     }
 
-    function openLightbox(src, alt, mediaType) {
+    function openLightbox(src, alt, mediaType, postUrl) {
         var lightbox = getLightbox();
         if (!lightbox || !src) return;
         var img = lightbox.querySelector('.showcase-lightbox__image');
         var video = lightbox.querySelector('.showcase-lightbox__video');
         var youtube = lightbox.querySelector('.showcase-lightbox__youtube');
+        var postLink = lightbox.querySelector('.showcase-lightbox__post-link');
         if (!img || !video || !youtube) return;
         youtube.removeAttribute('src');
         youtube.style.display = 'none';
@@ -49,6 +55,14 @@
             img.src = src;
             img.alt = alt || 'Screenshot preview';
             img.style.display = 'block';
+        }
+        if (postLink) {
+            if (postUrl) {
+                postLink.href = postUrl;
+                postLink.style.display = 'inline-flex';
+            } else {
+                postLink.style.display = 'none';
+            }
         }
         lightbox.classList.add('is-open');
         lightbox.setAttribute('aria-hidden', 'false');
@@ -76,7 +90,7 @@
         var trigger = event.target.closest('.screenshot-lightbox-trigger');
         if (trigger) {
             event.preventDefault();
-            openLightbox(trigger.getAttribute('data-full') || trigger.getAttribute('href'), trigger.querySelector('img')?.alt, trigger.getAttribute('data-media-type'));
+            openLightbox(trigger.getAttribute('data-full') || trigger.getAttribute('href'), trigger.querySelector('img')?.alt, trigger.getAttribute('data-media-type'), trigger.getAttribute('data-post-url'));
             return;
         }
         if (event.target.closest('.showcase-lightbox__close') || event.target.closest('.showcase-lightbox__backdrop')) {

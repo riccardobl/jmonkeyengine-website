@@ -225,16 +225,18 @@ def main() -> None:
 
         author = _to_str(post.get("username", ""))
         preview = _extract_text_preview(cooked)
+        post_number = post.get("post_number", 1)
+        post_url = f"{topic_url}/{post_number}"
 
         images = _extract_images_from_cooked(cooked)
         if images:
-            item: Dict[str, Any] = {"type": "image", "src": random.choice(images), "author": author}
+            item: Dict[str, Any] = {"type": "image", "src": random.choice(images), "author": author, "postUrl": post_url}
             if preview:
                 item["preview"] = preview
             items.append(item)
 
         for video in _extract_videos_from_cooked(cooked):
-            v: Dict[str, Any] = {"type": "video", "author": author}
+            v: Dict[str, Any] = {"type": "video", "author": author, "postUrl": post_url}
             if preview:
                 v["preview"] = preview
             v.update(video)

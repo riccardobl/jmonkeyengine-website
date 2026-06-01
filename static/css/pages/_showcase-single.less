@@ -313,6 +313,15 @@ section.game-page {
     padding: clamp(1rem, 4vw, 3rem);
 }
 .showcase-lightbox.is-open { display: flex; }
+.showcase-lightbox__content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: ~"min(1200px, 94vw)";
+    max-height: 92vh;
+}
 .showcase-lightbox__backdrop {
     position: absolute;
     inset: 0;
@@ -325,8 +334,6 @@ section.game-page {
     position: relative;
     z-index: 1;
     margin: 0;
-    max-width: ~"min(1200px, 94vw)";
-    max-height: 88vh;
     border-radius: 18px;
     overflow: hidden;
     border: 1px solid rgba(255,255,255,0.16);
@@ -356,7 +363,7 @@ section.game-page {
     position: fixed;
     top: 1.25rem;
     right: 1.25rem;
-    z-index: 2;
+    z-index: 5001;
     width: 44px;
     height: 44px;
     border-radius: 50%;
@@ -374,6 +381,33 @@ section.game-page {
     border-color: @accent;
     color: @accent;
     outline: none;
+}
+.showcase-lightbox__post-link {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    padding: 0.65rem 1rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+    text-decoration: none;
+    color: @accent;
+    background: rgba(0, 0, 0, 0.55);
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0 0 17px 17px;
+    backdrop-filter: blur(14px) saturate(135%);
+    -webkit-backdrop-filter: blur(14px) saturate(135%);
+    transition: background 0.2s ease, opacity 0.2s ease;
+}
+.showcase-lightbox__post-link:hover {
+    background: rgba(0, 0, 0, 0.75);
+    opacity: 0.85;
 }
 
 /* Game tags in page body */
