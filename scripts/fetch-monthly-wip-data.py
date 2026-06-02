@@ -8,9 +8,11 @@ The script finds the topic whose title matches "(Month YYYY) Monthly WIP Screens
 Thread" for the current month, then extracts images and YouTube video thumbnails
 from the post content.
 
-If the current month's thread is not found, the script tries the previous month
-(repeating up to MAX_MONTHLY_WIP_LOOKBACK times, default 3).  If no thread is
-found within the lookback window, the script exits with an error.
+If the current month has fewer items than MIN_MONTHLY_WIP_ITEMS (default 10),
+the script aggregates items from previous months until the minimum is reached,
+respecting MAX_MONTHLY_WIP_LOOKBACK (default 3).
+
+If no thread is found within the lookback window, the script exits with an error.
 """
 
 from __future__ import annotations
@@ -36,6 +38,7 @@ MONTH_NAMES = [
 
 DEFAULT_OUTPUT = "data/community/monthly-wip.json"
 DEFAULT_LOOKBACK_MONTHS = 3
+DEFAULT_MIN_ITEMS = 10
 
 
 def _read_json(url: str, payload: Optional[dict] = None, timeout: int = 30) -> Tuple[Any, dict]:
@@ -117,6 +120,40 @@ def _extract_videos_from_cooked(cooked: str) -> List[Dict[str, str]]:
     return videos
 
 
+def _extract_items_from_posts(posts: List[Dict[str, Any]], topic_url: str, month_sort_key: int = 0) -> List[Dict[str, Any]]:
+    """Extract images and videos from a list of posts.
+
+    Args:
+        month_sort_key: Integer used for ordering items by recency (higher = more recent).
+    """
+    items: List[Dict[str, Any]] = []
+    for post in posts:
+        cooked = _to_str(post.get("cooked", ""))
+        if not cooked:
+            continue
+
+        author = _to_str(post.get("username", ""))
+        preview = _extract_text_preview(cooked)
+        post_number = post.get("post_number", 1)
+        post_url = f"{topic_url}/{post_number}"
+
+        images = _extract_images_from_cooked(cooked)
+        if images:
+            item: Dict[str, Any] = {"type": "image", "src": random.choice(images), "author": author, "postUrl": post_url, "_sort": month_sort_key}
+            if preview:
+                item["preview"] = preview
+            items.append(item)
+
+        for video in _extract_videos_from_cooked(cooked):
+            v: Dict[str, Any] = {"type": "video", "author": author, "postUrl": post_url, "_sort": month_sort_key}
+            if preview:
+                v["preview"] = preview
+            v.update(video)
+            items.append(v)
+
+    return items
+
+
 def _fetch_topic_posts(topic_id: int) -> List[Dict[str, Any]]:
     """Fetch all posts from a topic, handling pagination."""
     url = f"{DISCOURSE_BASE_URL}/t/{topic_id}.json"
@@ -181,73 +218,88 @@ def main() -> None:
             output_path = parser_args[idx + 1]
 
     max_lookback = int(os.environ.get("MAX_MONTHLY_WIP_LOOKBACK", DEFAULT_LOOKBACK_MONTHS))
+    min_items = int(os.environ.get("MIN_MONTHLY_WIP_ITEMS", DEFAULT_MIN_ITEMS))
 
     now = datetime.now(timezone.utc)
     year, month = now.year, now.month
 
-    print(f"[INFO] Looking for WIP thread (max {max_lookback} months lookback)...")
+    print(f"[INFO] Looking for WIP thread (max {max_lookback} months lookback, min {min_items} items)...")
 
-    topic = None
+    all_items: List[Dict[str, Any]] = []
+    source_topics: List[Dict[str, Any]] = []
+    primary_topic = None
+    attempt = 0
+
     for attempt in range(max_lookback + 1):
         month_name = MONTH_NAMES[month - 1]
         print(f"[INFO] Trying {month_name} {year}...")
         topic = find_thread_for_month(year, month)
         if topic is not None:
-            break
+            topic_id = topic["id"]
+            topic_slug = topic.get("slug", "")
+            topic_title = _to_str(topic.get("title"))
+            topic_url = f"{DISCOURSE_BASE_URL}/t/{topic_slug}/{topic_id}"
+
+            print(f"[INFO] Found thread: {topic_title} (id={topic_id})")
+            print(f"[INFO] Fetching posts...")
+
+            posts = _fetch_topic_posts(topic_id)
+            print(f"[INFO] Fetched {len(posts)} posts from {month_name} {year}")
+
+            # Use inverse of attempt as sort key: 0 for current month, -1 for previous, etc.
+            # Items with higher sort values appear first (leftmost)
+            sort_key = -attempt
+            month_items = _extract_items_from_posts(posts, topic_url, month_sort_key=sort_key)
+            print(f"[INFO] Extracted {len(month_items)} items from {month_name} {year}")
+
+            all_items.extend(month_items)
+            source_topics.append({
+                "id": topic_id,
+                "title": topic_title,
+                "url": topic_url,
+                "year": year,
+                "month": month,
+                "monthName": month_name,
+                "postsCount": _to_str(topic.get("posts_count")),
+                "likeCount": _to_str(topic.get("like_count")),
+                "views": _to_str(topic.get("views")),
+            })
+
+            if primary_topic is None:
+                primary_topic = topic
+
+            if len(all_items) >= min_items:
+                print(f"[INFO] Reached minimum {min_items} items (have {len(all_items)})")
+                break
+
         if attempt < max_lookback:
-            print(f"[WARN] No WIP thread found for {month_name} {year}.")
+            print(f"[WARN] Have {len(all_items)} items so far, need {min_items}. Looking at previous month...")
             year, month = _decrement_month(year, month)
 
-    if topic is None:
+    if not all_items:
         print(
             f"[ERROR] No WIP thread found after checking {max_lookback + 1} month(s). "
             f"Tried back to {MONTH_NAMES[month - 1]} {year}."
         )
         sys.exit(1)
 
-    topic_id = topic["id"]
-    topic_slug = topic.get("slug", "")
-    topic_title = _to_str(topic.get("title"))
-    topic_url = f"{DISCOURSE_BASE_URL}/t/{topic_slug}/{topic_id}"
+    if len(all_items) > min_items:
+        print(f"[INFO] Randomly selecting {min_items} items from {len(all_items)} total")
+        all_items = random.sample(all_items, min_items)
 
-    print(f"[INFO] Found thread: {topic_title} (id={topic_id})")
-    print(f"[INFO] Fetching posts...")
+    # Sort items by recency: most recent month first (left), oldest month last (right)
+    all_items.sort(key=lambda x: x.get("_sort", 0), reverse=True)
 
-    posts = _fetch_topic_posts(topic_id)
-    print(f"[INFO] Fetched {len(posts)} posts")
+    # Remove internal sort key before output
+    for item in all_items:
+        item.pop("_sort", None)
 
-    items: List[Dict[str, Any]] = []
-
-    for post in posts:
-        cooked = _to_str(post.get("cooked", ""))
-        if not cooked:
-            continue
-
-        author = _to_str(post.get("username", ""))
-        preview = _extract_text_preview(cooked)
-        post_number = post.get("post_number", 1)
-        post_url = f"{topic_url}/{post_number}"
-
-        images = _extract_images_from_cooked(cooked)
-        if images:
-            item: Dict[str, Any] = {"type": "image", "src": random.choice(images), "author": author, "postUrl": post_url}
-            if preview:
-                item["preview"] = preview
-            items.append(item)
-
-        for video in _extract_videos_from_cooked(cooked):
-            v: Dict[str, Any] = {"type": "video", "author": author, "postUrl": post_url}
-            if preview:
-                v["preview"] = preview
-            v.update(video)
-            items.append(v)
-
-    print(f"[INFO] Extracted {len(items)} items ({sum(1 for i in items if i['type'] == 'image')} images, {sum(1 for i in items if i['type'] == 'video')} videos)")
+    print(f"[INFO] Final selection: {len(all_items)} items ({sum(1 for i in all_items if i['type'] == 'image')} images, {sum(1 for i in all_items if i['type'] == 'video')} videos)")
 
     generated_at = datetime.now(timezone.utc).isoformat()
 
-    image_count = sum(1 for i in items if i["type"] == "image")
-    video_count = sum(1 for i in items if i["type"] == "video")
+    image_count = sum(1 for i in all_items if i["type"] == "image")
+    video_count = sum(1 for i in all_items if i["type"] == "video")
     parts = []
     if image_count:
         parts.append(f"{image_count} screenshot{'s' if image_count != 1 else ''}")
@@ -255,18 +307,20 @@ def main() -> None:
         parts.append(f"{video_count} video{'s' if video_count != 1 else ''}")
     items_summary = " and ".join(parts) if parts else "no items"
 
+    primary = source_topics[0] if source_topics else {}
     payload = {
         "generatedAt": generated_at,
         "subtitle": f"{items_summary} — our community is very active, check what they're working on this month!",
         "topic": {
-            "id": topic_id,
-            "title": topic_title,
-            "url": topic_url,
-            "postsCount": _to_str(topic.get("posts_count")),
-            "likeCount": _to_str(topic.get("like_count")),
-            "views": _to_str(topic.get("views")),
+            "id": primary.get("id", ""),
+            "title": primary.get("title", ""),
+            "url": primary.get("url", ""),
+            "postsCount": primary.get("postsCount", ""),
+            "likeCount": primary.get("likeCount", ""),
+            "views": primary.get("views", ""),
         },
-        "items": items,
+        "items": all_items,
+        "sources": source_topics,
         "status": {
             "errors": [],
             "stale": False,
@@ -276,7 +330,7 @@ def main() -> None:
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"[OK] Wrote {out} ({len(items)} items)")
+    print(f"[OK] Wrote {out} ({len(all_items)} items)")
 
 
 if __name__ == "__main__":
