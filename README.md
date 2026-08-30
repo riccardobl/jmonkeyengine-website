@@ -34,3 +34,16 @@ DONT_COMPILE_LESS=1 ./make.sh
 ```
 
 The server binds to `0.0.0.0` and uses Hugo's default port, `1313`.
+
+## Library API
+
+The Library page reads its backend address from the Hugo parameter
+`params.libraryApiBase`. Override it for local development without editing the
+tracked production default:
+
+```sh
+HUGO_PARAMS_LIBRARYAPIBASE=http://127.0.0.1:8080 ./make.sh server
+```
+
+Production backends must use HTTPS. Plain HTTP is accepted by the frontend only
+for loopback development addresses.
