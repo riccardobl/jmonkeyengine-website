@@ -1097,17 +1097,21 @@
       card.append(osIcon, node("span", "library-platform-name", label));
       const badges = node("div", "library-platform-architectures");
       const architectures = new Set((platform.architectures || []).map((value) => String(value).toUpperCase()));
-      if (architectures.has("X86") || architectures.has("X86_64")) {
-        const badge = node("span", "library-platform-architecture", "x86");
-        badge.title = [architectures.has("X86") ? "x86" : "", architectures.has("X86_64") ? "x86-64" : ""].filter(Boolean).join(", ");
+      const architectureMetadata = {
+        X86_64: os === "IOS"
+          ? ["X86_64", "64-bit Intel iOS Simulator"]
+          : ["X86_64", "64-bit Intel/AMD"],
+        ARM64: ["ARM64", os === "MACOS" ? "ARM64 Apple Silicon" : "64-bit ARM"]
+      };
+      ["X86_64", "ARM64"].forEach((architecture) => {
+        if (!architectures.has(architecture)) return;
+        const [architectureLabel, architectureTitle] = architectureMetadata[architecture];
+        const badge = node("span", "library-platform-architecture", architectureLabel);
+        badge.title = architectureTitle;
         badges.append(badge);
-      }
-      if (architectures.has("ARM32") || architectures.has("ARM64")) {
-        const badge = node("span", "library-platform-architecture", "ARM");
-        badge.title = [architectures.has("ARM32") ? "ARM32" : "", architectures.has("ARM64") ? "ARM64" : ""].filter(Boolean).join(", ");
-        badges.append(badge);
-      }
+      });
       if (architectures.has("UNKNOWN") || !badges.children.length) {
+        if (!architectures.has("UNKNOWN")) return;
         const badge = node("span", "library-platform-architecture library-platform-architecture--unknown", "?");
         badge.title = "Architecture not identified";
         badges.append(badge);
@@ -1232,14 +1236,17 @@
     }
     elements.scoreBreakdown.append(gateSection);
 
-    const checks = Array.isArray(score.breakdown) ? score.breakdown.slice(0, 256) : [];
-    const checkSection = node("section", "library-score-section");
-    checkSection.append(node("h3", "", "Score checks"));
-    if (!checks.length) {
-      checkSection.append(node("p", "", "A per-check breakdown is not available for this older snapshot. It will appear after the next analysis."));
-    } else {
+    const rawChecks = Array.isArray(score.breakdown) ? score.breakdown : [];
+    // Older scorer versions incorrectly repeated the module author's trust on
+    // every dependency. Never present those legacy rows as dependency evidence.
+    const relevantChecks = rawChecks.filter((check) => !(
+      String(check.scope || "").toLowerCase() === "dependency"
+      && String(check.name || "").toLowerCase() === "github-author-trust"
+    ));
+    const checks = relevantChecks.slice(0, 256);
+    const appendCheckList = (section, sectionChecks, includeCoordinate) => {
       const list = node("ol", "library-score-checks");
-      checks.forEach((check) => {
+      sectionChecks.forEach((check) => {
         const row = node("li", "library-score-check");
         const heading = node("div", "library-score-check-heading");
         const title = node("strong", "", humanScoreCheck(check.name));
@@ -1250,18 +1257,55 @@
           check.scope,
           check.status,
           check.excluded ? "excluded from aggregate" : "",
-          check.coordinate
+          includeCoordinate ? check.coordinate : ""
         ].filter(Boolean).join(" · ");
         row.append(heading, node("small", "", metadata));
         if (check.message) row.append(node("p", "", String(check.message)));
         list.append(row);
       });
-      checkSection.append(list);
-      if (score.breakdown.length > checks.length) {
-        checkSection.append(node("p", "library-score-truncated", `Showing the first ${checks.length} of ${score.breakdown.length} checks.`));
+      section.append(list);
+    };
+
+    if (!checks.length) {
+      const checkSection = node("section", "library-score-section");
+      checkSection.append(node("h3", "", "Score checks"));
+      checkSection.append(node("p", "", "A per-check breakdown is not available for this older snapshot. It will appear after the next analysis."));
+      elements.scoreBreakdown.append(checkSection);
+    } else {
+      const moduleChecks = checks.filter((check) => String(check.scope || "").toLowerCase() !== "dependency");
+      const moduleSection = node("section", "library-score-section");
+      moduleSection.append(node("h3", "", "Module assessment"));
+      moduleSection.append(node("p", "library-score-explanation",
+        "Author trust applies only to the submitted module. These signals determine the module's own score."));
+      if (moduleChecks.length) appendCheckList(moduleSection, moduleChecks, true);
+      elements.scoreBreakdown.append(moduleSection);
+
+      const dependencyChecks = checks.filter((check) => String(check.scope || "").toLowerCase() === "dependency");
+      const dependencySection = node("section", "library-score-section");
+      dependencySection.append(node("h3", "", "Dependency risk"));
+      dependencySection.append(node("p", "library-score-explanation",
+        "A dependency can maintain or lower the final score, but it can never increase the module's score."));
+      if (!dependencyChecks.length) {
+        dependencySection.append(node("p", "library-score-passed", "No included dependency checks were reported."));
+      } else {
+        const byCoordinate = new Map();
+        dependencyChecks.forEach((check) => {
+          const coordinate = String(check.coordinate || "Unknown dependency");
+          if (!byCoordinate.has(coordinate)) byCoordinate.set(coordinate, []);
+          byCoordinate.get(coordinate).push(check);
+        });
+        byCoordinate.forEach((coordinateChecks, coordinate) => {
+          const group = node("section", "library-score-dependency");
+          group.append(node("h4", "", coordinate));
+          appendCheckList(group, coordinateChecks, false);
+          dependencySection.append(group);
+        });
+      }
+      elements.scoreBreakdown.append(dependencySection);
+      if (relevantChecks.length > checks.length) {
+        dependencySection.append(node("p", "library-score-truncated", `Showing the first ${checks.length} of ${relevantChecks.length} relevant checks.`));
       }
     }
-    elements.scoreBreakdown.append(checkSection);
     elements.scoreDialog.showModal();
   }
 
