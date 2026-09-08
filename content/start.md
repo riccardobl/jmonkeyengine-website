@@ -67,35 +67,7 @@ The initializer is the most convenient path if you do not want to be tied to a s
 
 You can use any compatible setup, including [Visual Studio Code](https://code.visualstudio.com/), [IntelliJ IDEA](https://www.jetbrains.com/idea/), [Eclipse](https://www.eclipse.org/ide/), or another editor you prefer with Gradle project support.
 
-You can access the tool directly from [here](https://start.jmonkeyengine.org) or use the embedded version below.
-
-<iframe id="jme-initializer"
-    src="https://start.jmonkeyengine.org"
-></iframe>
-
-<script>
-    const iframe=document.querySelector("#jme-initializer");
-    if(iframe){
-        iframe.src=iframe.src+"?rnd="+Math.random()+"&time="+Date.now(); // avoid caching
-        window.addEventListener("message",(msg)=>{
-            try{
-                const event=JSON.parse(msg.data);
-                if(event.name=="jme-initializer-resize"){
-                    const height=event.height;
-                    document.querySelector("#jme-initializer").style.height = height + 'px';
-                }else if(event.name=="jme-initializer-scrollToTop"){
-                    const el=document.querySelector("#jme-initializer");
-                    window.scrollToElement(el);
-                }     
-            }catch(e){
-                console.log(e);
-            }
-            
-        });
-
-
-    }
-</script>
+{{< initializer >}}
 
 </div>
 

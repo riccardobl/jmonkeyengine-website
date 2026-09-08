@@ -22,7 +22,9 @@ disableKinds = ["taxonomy", "term"]
 [params]
   hostname="jmonkeyengine.org"
   store=true
+  libraryEnabled=false
   libraryApiBase="https://library.jmonkeyengine.org"
+  initializerUrl="https://start.jmonkeyengine.org"
   libraryHiddenTopics=[
     "jmonkey",
     "jmonkeyengine",

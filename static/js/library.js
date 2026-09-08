@@ -918,13 +918,7 @@
 
   function visibleCategoryTags() {
     return state.availableTags
-      .filter((tag) => tag?.name && !hiddenTopics.has(String(tag.name).toLowerCase()))
-      .sort((left, right) => {
-        const countDifference = (Number(right.count) || 0) - (Number(left.count) || 0);
-        return countDifference || String(left.name).localeCompare(String(right.name), undefined, {
-          sensitivity: "base"
-        });
-      });
+      .filter((tag) => tag?.name && !hiddenTopics.has(String(tag.name).toLowerCase()));
   }
 
   function updateHeroMetric(element, value) {

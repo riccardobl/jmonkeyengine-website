@@ -47,3 +47,21 @@ HUGO_PARAMS_LIBRARYAPIBASE=http://127.0.0.1:8080 ./make.sh server
 
 Production backends must use HTTPS. Plain HTTP is accepted by the frontend only
 for loopback development addresses.
+
+The Library navigation button is controlled by `params.libraryEnabled` and is
+disabled by default. Set it to `true` when the public Library link should be
+shown; the `/library/` page remains available regardless of this navigation flag.
+
+The Get Started embed uses `params.initializerUrl`. To preview the local initializer:
+
+```sh
+HUGO_PARAMS_INITIALIZERURL=http://127.0.0.1:8081 HUGO_PARAMS_LIBRARYAPIBASE=http://127.0.0.1:8080 ./make.sh server
+```
+
+The iframe requests the compact embed layout and resizes to its content, accepting
+height messages only from the configured initializer frame and origin.
+
+Library categories use the order returned by `/api/extensions/tags`: global
+module count descending, combined GitHub stars descending, then name. The UI
+only filters generic topics; it does not re-sort categories or derive them from
+the current module page.
