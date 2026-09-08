@@ -22,6 +22,23 @@ disableKinds = ["taxonomy", "term"]
 [params]
   hostname="jmonkeyengine.org"
   store=true
+  libraryEnabled=false
+  libraryApiBase="https://backend.jmonkeyengine.org"
+  initializerUrl="https://start.jmonkeyengine.org"
+  libraryHiddenTopics=[
+    "jmonkey",
+    "jmonkeyengine",
+    "jmonkeyengine3",
+    "jme3",
+    "java",
+    "java-library",
+    "jvm",
+    "jvm-library",
+    "library",
+    "libraries",
+    "open-source",
+    "opensource"
+  ]
 
 [params.donate]
   defaultFundIcon = "fa-solid fa-circle-dollar-to-slot"

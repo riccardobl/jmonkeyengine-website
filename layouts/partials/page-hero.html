@@ -70,6 +70,10 @@
   {{- $eyebrow = "Contribute" -}}
   {{- $description = "Join the community: improve code, write docs, report issues, publish libraries, or support development." -}}
   {{- $icon = "fa-code-branch" -}}
+{{- else if eq .RelPermalink "/library/" -}}
+  {{- $eyebrow = "Community Modules" -}}
+  {{- $description = "Discover libraries, integrations, and tools published for jMonkeyEngine." -}}
+  {{- $icon = "fa-puzzle-piece" -}}
 {{- else if eq .RelPermalink "/contact/" -}}
   {{- $eyebrow = "Contact" -}}
   {{- $description = "Reach the jMonkeyEngine community, core maintainers, or contact us directly by email." -}}
@@ -118,6 +122,15 @@
         <strong>{{ .Params.source_name | default "News" }}</strong>
         <small>source</small>
         {{- end -}}
+      </span>
+      {{ else if eq .RelPermalink "/library/" }}
+      <span class="page-hero__metric">
+        <strong id="library-hero-modules" aria-live="polite" aria-busy="true">…</strong>
+        <small>modules</small>
+      </span>
+      <span class="page-hero__metric">
+        <strong id="library-hero-developers" aria-live="polite" aria-busy="true">…</strong>
+        <small>developers</small>
       </span>
       {{ else }}
       <span class="page-hero__metric"><strong>Java</strong><small>engine</small></span>

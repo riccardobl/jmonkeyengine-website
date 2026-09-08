@@ -6,7 +6,9 @@
                     <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
                     <li><a href="/showcase"><i class="fas fa-images"></i> Showcase</a></li>
                     <li><a href="https://hub.jmonkeyengine.org" target="_blank" rel="noopener noreferrer"><i class="fab fa-discourse"></i> Discussions</a></li>
-                    <li><a href="https://library.jmonkeyengine.org" target="_blank" rel="noopener noreferrer"><i class="fas fa-puzzle-piece"></i> Library</a></li>
+                    {{ if .Site.Params.libraryEnabled }}
+                    <li><a href="/library/"><i class="fas fa-puzzle-piece"></i> Library</a></li>
+                    {{ end }}
                     <li><a href="https://wiki.jmonkeyengine.org" target="_blank" rel="noopener noreferrer"><i class="fas fa-book"></i> Docs</a></li>
                     {{ if partial "store-enabled.html" . }}
                     <li><a href="https://shop.jmonkeyengine.org/" target="_blank" rel="noopener noreferrer"><i class="fas fa-bag-shopping"></i> Merch</a></li>
