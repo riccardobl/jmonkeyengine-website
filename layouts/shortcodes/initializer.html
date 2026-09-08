@@ -1,0 +1,20 @@
+{{ $base := .Page.Site.Params.initializerUrl | default "https://start.jmonkeyengine.org" }}
+<p>You can <a href="{{ $base }}" target="_blank" rel="noopener noreferrer">open the initializer separately</a> or configure your project below.</p>
+<iframe id="jme-initializer" title="jMonkeyEngine project initializer"
+    src="{{ $base }}?embed=1" style="display:block;width:100%;border:0" ></iframe>
+<script>
+(() => {
+    const iframe = document.getElementById('jme-initializer');
+    const origin = new URL(iframe.src).origin;
+    window.addEventListener('message', message => {
+        if (message.source !== iframe.contentWindow || message.origin !== origin) return;
+        try {
+            const event = typeof message.data === 'string' ? JSON.parse(message.data) : message.data;
+            if (event?.name === 'jme-initializer-resize' && Number.isFinite(event.height)
+                    && event.height > 0 && event.height < 100000) {
+                iframe.style.height = Math.ceil(event.height) + 'px';
+            }
+        } catch (_) { /* Ignore unrelated or malformed messages. */ }
+    });
+})();
+</script>
