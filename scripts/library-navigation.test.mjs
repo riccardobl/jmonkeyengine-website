@@ -68,3 +68,11 @@ test('module card titles are real links and confidence effects have no repeated 
     assert.doesNotMatch(code('openScoreDialog'), /`confidence \$\{/);
     assert.match(code('openScoreDialog'), /heading\.append\(title, effects\)/);
 });
+
+test('archived repositories have a hidden badge and an explicit reason even with a manual listing', () => {
+    const ctx = context('https://jmonkeyengine.org/library/');
+    vm.runInContext(`${code('stateLabel')}\n${code('visibilityReasons')}`, ctx);
+    ctx.item = {repositoryArchived: true, moderationState: 'LISTED', visibilityDecision: 'HIDDEN'};
+    assert.equal(vm.runInContext('stateLabel(item)', ctx), 'HIDDEN');
+    assert.match(vm.runInContext('visibilityReasons(item)[0]', ctx), /Repository archived on GitHub/);
+});

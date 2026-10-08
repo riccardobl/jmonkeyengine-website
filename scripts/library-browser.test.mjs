@@ -39,12 +39,13 @@ test('Library browser navigation, moderation, score layout and independent scrol
                 {name: 'artifact-baseline', scope: 'root', status: 'PASS', scoreDelta: 0, confidenceDelta: 0, message: 'Artifact baseline'}
             ]}
     };
-    async function createContext(admin) {
+    async function createContext(admin, options = {}) {
         const context = await browser.newContext({viewport: {width: 1440, height: 1000}});
         const posts = [];
-        let moderation = 'AUTO';
+        let moderation = options.initialModeration || 'AUTO';
         const item = (snapshot = 1927) => ({...structuredClone(fixture), snapshotId: snapshot, moderationState: moderation,
-            visibilityDecision: moderation === 'LISTED' ? 'LISTED' : 'NEEDS_REVIEW'});
+            repositoryArchived: Boolean(options.archived),
+            visibilityDecision: options.archived ? 'HIDDEN' : moderation === 'LISTED' ? 'LISTED' : 'NEEDS_REVIEW'});
         await context.route('https://bknd01.jmonkeyengine.org/**', async route => {
             const request = route.request(), url = new URL(request.url());
             const headers = {'Access-Control-Allow-Origin': base, 'Access-Control-Allow-Credentials': 'true',
@@ -55,7 +56,9 @@ test('Library browser navigation, moderation, score layout and independent scrol
                 ? {authenticated: true, login: 'member', csrfToken: 'test-csrf'} : {message: 'Login required'}, admin ? 200 : 401);
             if (url.pathname.endsWith('/moderation')) {
                 assert.equal(request.headers()['x-csrf-token'], 'test-csrf');
-                const body = request.postDataJSON(); posts.push(body); moderation = body.state; return send(item());
+                const body = request.postDataJSON(); posts.push(body);
+                if (!options.ignoreModeration) moderation = body.state;
+                return send(item());
             }
             if (url.pathname.endsWith('/snapshots')) return send({items: [
                 {snapshotId: 2000, version: 'Pending', processingStatus: 'PENDING', published: false},
@@ -143,6 +146,23 @@ test('Library browser navigation, moderation, score layout and independent scrol
         assert.equal(await admin.locator('.library-detail-aside').evaluate(element => getComputedStyle(element).maxHeight), 'none');
         assert.deepEqual(errors, []);
         await adminFixture.context.close();
+
+        const ignored = await createContext(true, {ignoreModeration: true});
+        const ignoredPage = await ignored.context.newPage();
+        await ignoredPage.goto(`${base}/library/?module=216200609&snapshot=latest`);
+        await ignoredPage.locator('.library-moderation').waitFor();
+        await ignoredPage.locator('.library-moderation button').filter({hasText: /^List$/}).click();
+        await ignoredPage.getByText('The backend did not confirm the requested moderation state. No successful save was reported.').waitFor();
+        assert.equal(await ignoredPage.getByText('Saved. Current state: LISTED.').count(), 0);
+        await ignored.context.close();
+
+        const archived = await createContext(true, {archived: true, initialModeration: 'LISTED'});
+        const archivedPage = await archived.context.newPage();
+        await archivedPage.goto(`${base}/library/?module=216200609&snapshot=latest`);
+        await archivedPage.getByText('Current state: HIDDEN.').waitFor();
+        assert.equal(await archivedPage.locator('.library-moderation button').filter({hasText: /^List$/}).isDisabled(), true);
+        await archivedPage.locator('.library-detail').getByText('Repository archived on GitHub. Hidden from recommendations; historical snapshots remain available.').waitFor();
+        await archived.context.close();
     } finally {
         await browser.close();
         await new Promise(done => server.close(done));

@@ -458,6 +458,7 @@
   }
 
   function stateLabel(item) {
+    if (item.repositoryArchived) return "HIDDEN";
     if (item.processingStatus === "PENDING") return "PENDING";
     if (item.moderationState && item.moderationState !== "AUTO") {
       return item.moderationState.replaceAll("_", " ");
@@ -555,6 +556,7 @@
   }
 
   function visibilityReasons(item, limit = 3) {
+    if (item.repositoryArchived) return ["Repository archived on GitHub. Hidden from recommendations; historical snapshots remain available."];
     if (item.processingStatus === "PENDING") {
       const pending = Array.isArray(item.pendingChecks) ? item.pendingChecks : [];
       const reasons = pending.map(pendingCheckReason).filter(Boolean);
@@ -1321,6 +1323,9 @@
           const updated = await fetchJson(`/admin/extensions/${encodeURIComponent(item.githubRepositoryId)}/moderation`, {
             method: "POST", admin: true, body: JSON.stringify({ state: value })
           });
+          if (updated.moderationState !== value) {
+            throw new Error("The backend did not confirm the requested moderation state. No successful save was reported.");
+          }
           Object.assign(item, updated);
           state.moderationFeedback = {
             module: item.githubRepositoryId, message: `Saved. Current state: ${stateLabel(updated)}.`, error: false
@@ -1333,9 +1338,11 @@
           disabledStates.forEach((disabled, action) => { action.disabled = disabled; });
         }
       });
-      if (value === "LISTED" && (item.processingStatus === "PENDING" || item.score?.decision === "REJECTED")) {
+      if (value === "LISTED" && (item.repositoryArchived || item.processingStatus === "PENDING" || item.score?.decision === "REJECTED")) {
         control.disabled = true;
-        control.title = item.processingStatus === "PENDING"
+        control.title = item.repositoryArchived
+          ? "Archived GitHub repositories are hidden from recommendations."
+          : item.processingStatus === "PENDING"
           ? "Verification must finish before this module can be listed."
           : "A blocking security rejection cannot be overridden by moderation.";
         section.append(node("p", "library-moderation-limit", control.title));
