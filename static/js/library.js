@@ -1883,6 +1883,12 @@
     if (!recipes.length) {
       return renderInstallFallback(item);
     }
+    if (item.releaseSourceUnverified === true) {
+      const notice = node("p", "library-install-note library-install-prerequisite",
+        "The published release could not be linked to an exact source revision. Source-based assessment may not describe this release.");
+      notice.setAttribute("role", "status");
+      install.append(notice);
+    }
     const code = node("code", "", recipes[0].gradleSnippet);
     const prerequisite = node("p", "library-install-note library-install-prerequisite", installationPrerequisite(recipes[0]));
     prerequisite.hidden = !prerequisite.textContent;

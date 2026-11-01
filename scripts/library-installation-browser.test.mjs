@@ -130,6 +130,13 @@ test('artifact selection, copy, incompatible recipes and compact repository fall
         assert.equal(await legacy.page.getByRole('button', {name: 'Copy Gradle snippet'}).count(), 0);
         await legacy.context.close();
 
+        const unverifiedRelease = await open({sourceProvenanceVerified: true, releaseSourceUnverified: true}, {admin: true});
+        assert.equal(await unverifiedRelease.page.locator('.library-install [role="status"]').count(), 1);
+        assert.match(await unverifiedRelease.page.locator('.library-install [role="status"]').textContent(), /exact source revision/i);
+        assert.equal(await unverifiedRelease.page.locator('.library-moderation-limit').count(), 0);
+        assert.equal(await unverifiedRelease.page.getByRole('button', {name: 'Copy Gradle snippet'}).count(), 1);
+        await unverifiedRelease.context.close();
+
         const approved = await open({moderationState: 'LISTED', visibilityDecision: 'LISTED',
             score: {...fixture.score, score: -10, decision: 'NEEDS_REVIEW'}});
         const detailBadge = approved.page.locator('.library-detail-header .library-score--approved');
